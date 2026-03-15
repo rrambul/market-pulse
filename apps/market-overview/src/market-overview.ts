@@ -7,10 +7,12 @@ import {
   marketBreadth,
   assetsByType,
   totalAlertCount,
+  getPriceHistory,
 } from '@market-pulse/state';
 import { setSelectedSymbol } from '@market-pulse/state';
 import { formatPrice, formatPercent, formatVolume } from '@market-pulse/utils';
 import { themeStyles } from '@market-pulse/ui';
+import '@market-pulse/ui';
 import type { Asset } from '@market-pulse/contracts';
 
 @customElement('mp-market-overview')
@@ -297,6 +299,7 @@ export class MpMarketOverview extends SignalWatcher(LitElement) {
         <thead>
           <tr>
             <th>Symbol</th>
+            <th>Chart</th>
             <th>Price</th>
             <th>Change</th>
             <th>Volume</th>
@@ -309,6 +312,13 @@ export class MpMarketOverview extends SignalWatcher(LitElement) {
                 <td>
                   <div class="symbol">${a.symbol}</div>
                   <div class="name">${a.name}</div>
+                </td>
+                <td>
+                  <mp-mini-chart
+                    .data=${getPriceHistory(a.symbol).get().map(p => p.price)}
+                    .width=${80}
+                    .height=${28}
+                  ></mp-mini-chart>
                 </td>
                 <td class="price">${formatPrice(a.price)}</td>
                 <td class="change ${a.changePercent >= 0 ? 'positive' : 'negative'}">

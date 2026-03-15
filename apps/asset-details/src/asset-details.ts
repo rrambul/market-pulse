@@ -1,9 +1,10 @@
 import { LitElement, html, css } from 'lit';
 import { SignalWatcher } from '@lit-labs/signals';
 import { customElement, property, state } from 'lit/decorators.js';
-import { getAssetSignal, alerts, isInWatchlist, addToWatchlist, removeFromWatchlist } from '@market-pulse/state';
+import { getAssetSignal, alerts, isInWatchlist, addToWatchlist, removeFromWatchlist, getPriceHistory } from '@market-pulse/state';
 import { formatPrice, formatChange, formatPercent, formatVolume, formatTimestamp } from '@market-pulse/utils';
 import { themeStyles } from '@market-pulse/ui';
+import '@market-pulse/ui';
 import type { AlertTriggeredEvent } from '@market-pulse/contracts';
 
 @customElement('mp-asset-details')
@@ -252,6 +253,15 @@ export class MpAssetDetails extends SignalWatcher(LitElement) {
               ${inWatchlist ? '★ In Watchlist' : '☆ Add to Watchlist'}
             </button>
           </div>
+        </div>
+
+        <!-- Price Chart -->
+        <div class="full-width">
+          <mp-price-chart
+            .data=${getPriceHistory(this.symbol).get().map(p => ({ price: p.price, timestamp: p.timestamp }))}
+            label="${asset.symbol} Price"
+            .height=${240}
+          ></mp-price-chart>
         </div>
 
         <!-- Price Metrics -->

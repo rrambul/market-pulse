@@ -7,10 +7,12 @@ import {
   addToWatchlist,
   watchlistSymbols,
   assetStore,
+  getPriceHistory,
 } from '@market-pulse/state';
 import { setSelectedSymbol } from '@market-pulse/state';
 import { formatPrice, formatPercent, formatVolume } from '@market-pulse/utils';
 import { themeStyles } from '@market-pulse/ui';
+import '@market-pulse/ui';
 
 type SortField = 'symbol' | 'price' | 'changePercent' | 'volume';
 type SortDir = 'asc' | 'desc';
@@ -304,6 +306,7 @@ export class MpWatchlistPanel extends SignalWatcher(LitElement) {
                   <th class=${this.sortField === 'changePercent' ? 'sorted' : ''} @click=${() => this.handleSort('changePercent')}>
                     Change ${this.sortField === 'changePercent' ? (this.sortDir === 'asc' ? '↑' : '↓') : ''}
                   </th>
+                  <th>Chart</th>
                   <th class=${this.sortField === 'volume' ? 'sorted' : ''} @click=${() => this.handleSort('volume')}>
                     Volume ${this.sortField === 'volume' ? (this.sortDir === 'asc' ? '↑' : '↓') : ''}
                   </th>
@@ -321,6 +324,13 @@ export class MpWatchlistPanel extends SignalWatcher(LitElement) {
                     <td class="price-cell">${formatPrice(a.price)}</td>
                     <td class="change-cell ${a.changePercent >= 0 ? 'positive' : 'negative'}">
                       ${formatPercent(a.changePercent)}
+                    </td>
+                    <td>
+                      <mp-mini-chart
+                        .data=${getPriceHistory(a.symbol).get().map(p => p.price)}
+                        .width=${72}
+                        .height=${24}
+                      ></mp-mini-chart>
                     </td>
                     <td>${formatVolume(a.volume)}</td>
                     <td>

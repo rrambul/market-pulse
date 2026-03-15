@@ -1,5 +1,5 @@
 import type { MarketEvent } from '@market-pulse/contracts';
-import { setAssets, updateAsset, addTradeEvent, addAlert } from '@market-pulse/state';
+import { setAssets, updateAsset, addTradeEvent, addAlert, recordPrice } from '@market-pulse/state';
 import { createRAFBatcher } from '@market-pulse/utils';
 import { MarketWebSocketClient } from './ws-client.js';
 import { MarketRestClient } from './rest-client.js';
@@ -109,6 +109,8 @@ export class MarketClientManager {
           low: event.low,
           lastUpdated: event.timestamp,
         });
+        // Record price for chart history
+        recordPrice(event.symbol, event.price, event.timestamp);
       }
     }
 

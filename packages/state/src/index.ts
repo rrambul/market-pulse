@@ -35,3 +35,9 @@ export {
   performanceMetrics,
   updatePerformanceMetrics,
 } from './perf-store.js';
+export {
+  getPriceHistory,
+  recordPrice,
+  seedPriceHistory,
+} from './price-history.js';
+export type { PricePoint } from './price-history.js';
