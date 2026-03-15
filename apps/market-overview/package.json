@@ -1,0 +1,25 @@
+{
+  "name": "@market-pulse/market-overview",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "rspack serve --mode development",
+    "build": "rspack build --mode production"
+  },
+  "dependencies": {
+    "lit": "^3.1.0",
+    "@lit-labs/signals": "^0.1.2",
+    "signal-polyfill": "^0.2.2",
+    "@market-pulse/contracts": "*",
+    "@market-pulse/state": "*",
+    "@market-pulse/ui": "*",
+    "@market-pulse/utils": "*"
+  },
+  "devDependencies": {
+    "@rspack/cli": "^1.0.0",
+    "@rspack/core": "^1.0.0",
+    "typescript": "^5.4.0",
+    "ts-loader": "^9.5.0"
+  }
+}

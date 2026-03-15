@@ -1,0 +1,26 @@
+{
+  "name": "@market-pulse/market-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@market-pulse/contracts": "*",
+    "@market-pulse/state": "*",
+    "@market-pulse/utils": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
