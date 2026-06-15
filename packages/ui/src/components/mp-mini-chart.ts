@@ -1,5 +1,5 @@
-import { LitElement, html, css, svg, nothing } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { LitElement, html, css, svg } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import { themeStyles } from '../theme.js';
 
 export interface MiniChartPoint {

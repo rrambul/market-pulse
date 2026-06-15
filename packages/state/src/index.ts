@@ -17,9 +17,11 @@ export {
 export {
   tradeEvents,
   addTradeEvent,
+  addTradeEvents,
   clearTradeEvents,
   alerts,
   addAlert,
+  addAlerts,
   clearAlerts,
   unreadAlertCount,
   markAlertsRead,
@@ -41,3 +43,8 @@ export {
   seedPriceHistory,
 } from './price-history.js';
 export type { PricePoint } from './price-history.js';
+export {
+  setMarketControl,
+  getMarketControl,
+} from './control.js';
+export type { MarketControl } from './control.js';

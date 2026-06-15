@@ -1,5 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'http';
+import type { StressTestConfig } from '@market-pulse/contracts';
+import { NORMAL_PROFILE, STRESS_PROFILE, ENGINE_LIMITS } from '@market-pulse/contracts';
 import type { MarketEngine } from './engine.js';
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
 
 export function handleRestRoutes(
   req: IncomingMessage,
@@ -47,16 +53,20 @@ export function handleRestRoutes(
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
       try {
-        const config = JSON.parse(body);
-        if (config.enabled) {
-          engine.setUpdateConfig(
-            config.updateFrequencyMs || 10,
-            config.batchSize || 36
-          );
-        } else {
-          engine.setUpdateConfig(100, 10);
-        }
-        sendJSON(res, { ok: true, config });
+        const config = JSON.parse(body) as Partial<StressTestConfig>;
+        const profile = config.enabled ? STRESS_PROFILE : NORMAL_PROFILE;
+        const updateFrequencyMs = clamp(
+          typeof config.updateFrequencyMs === 'number' ? config.updateFrequencyMs : profile.updateFrequencyMs,
+          ENGINE_LIMITS.minUpdateFrequencyMs,
+          ENGINE_LIMITS.maxUpdateFrequencyMs,
+        );
+        const batchSize = clamp(
+          typeof config.batchSize === 'number' ? config.batchSize : profile.batchSize,
+          ENGINE_LIMITS.minBatchSize,
+          ENGINE_LIMITS.maxBatchSize,
+        );
+        engine.setUpdateConfig(updateFrequencyMs, batchSize);
+        sendJSON(res, { ok: true, updateFrequencyMs, batchSize });
       } catch {
         res.writeHead(400);
         res.end('Invalid JSON');

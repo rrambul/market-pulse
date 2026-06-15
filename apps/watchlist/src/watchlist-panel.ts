@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { SignalWatcher } from '@lit-labs/signals';
 import { customElement, state } from 'lit/decorators.js';
 import {
@@ -6,10 +7,9 @@ import {
   removeFromWatchlist,
   addToWatchlist,
   watchlistSymbols,
-  assetStore,
   getPriceHistory,
+  setSelectedSymbol,
 } from '@market-pulse/state';
-import { setSelectedSymbol } from '@market-pulse/state';
 import { formatPrice, formatPercent, formatVolume } from '@market-pulse/utils';
 import { themeStyles } from '@market-pulse/ui';
 import '@market-pulse/ui';
@@ -314,7 +314,7 @@ export class MpWatchlistPanel extends SignalWatcher(LitElement) {
                 </tr>
               </thead>
               <tbody>
-                ${assets.map(a => html`
+                ${repeat(assets, a => a.symbol, a => html`
                   <tr @click=${() => setSelectedSymbol(a.symbol)}>
                     <td>
                       <div class="symbol-cell">${a.symbol}</div>

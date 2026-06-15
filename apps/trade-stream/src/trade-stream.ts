@@ -1,8 +1,8 @@
 import { LitElement, html, css } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { SignalWatcher } from '@lit-labs/signals';
 import { customElement, state } from 'lit/decorators.js';
-import { tradeEvents, clearTradeEvents } from '@market-pulse/state';
-import { setSelectedSymbol } from '@market-pulse/state';
+import { tradeEvents, clearTradeEvents, setSelectedSymbol } from '@market-pulse/state';
 import { formatPrice, formatTimestamp } from '@market-pulse/utils';
 import { themeStyles } from '@market-pulse/ui';
 import type { TradeExecutedEvent } from '@market-pulse/contracts';
@@ -183,24 +183,37 @@ export class MpTradeStream extends SignalWatcher(LitElement) {
 
   @state() private paused = false;
   @state() private visibleCount = 100;
+  /** Snapshot shown while paused. Reading it (instead of the live signal) is
+   *  what actually freezes the stream — and stops re-renders on new trades. */
+  @state() private frozen: readonly TradeExecutedEvent[] = [];
+
+  private togglePause() {
+    if (!this.paused) {
+      this.frozen = tradeEvents.get().slice(0, this.visibleCount);
+      this.paused = true;
+    } else {
+      this.paused = false;
+    }
+  }
 
   render() {
-    const allTrades = tradeEvents.get();
+    // While paused we deliberately do NOT read tradeEvents, so the SignalWatcher
+    // stops re-rendering until the user resumes.
     const trades = this.paused
-      ? allTrades // When paused, don't update displayed trades
-      : allTrades.slice(0, this.visibleCount);
+      ? this.frozen
+      : tradeEvents.get().slice(0, this.visibleCount);
 
     return html`
       <div class="header">
         <span class="title">
-          <span class="live-dot"></span>
+          ${this.paused ? null : html`<span class="live-dot"></span>`}
           Trade Stream
         </span>
         <div class="controls">
-          <span class="event-count">${allTrades.length} events</span>
+          <span class="event-count">${trades.length} shown${this.paused ? ' · paused' : ''}</span>
           <button
             class="btn pause-btn ${this.paused ? 'paused' : ''}"
-            @click=${() => { this.paused = !this.paused; }}
+            @click=${this.togglePause}
           >
             ${this.paused ? '▶ Resume' : '⏸ Pause'}
           </button>
@@ -219,15 +232,19 @@ export class MpTradeStream extends SignalWatcher(LitElement) {
         <div class="stream-body">
           ${trades.length === 0
             ? html`<div class="empty">Waiting for trades…</div>`
-            : trades.map((t: TradeExecutedEvent) => html`
-              <div class="trade-row" @click=${() => setSelectedSymbol(t.symbol)}>
-                <span class="trade-time">${formatTimestamp(t.timestamp)}</span>
-                <span class="trade-symbol">${t.symbol}</span>
-                <span class="trade-side ${t.side}">${t.side}</span>
-                <span class="trade-qty">${t.quantity.toLocaleString()}</span>
-                <span class="trade-price">${formatPrice(t.price)}</span>
-              </div>
-            `)}
+            : repeat(
+                trades,
+                (t) => t.id,
+                (t: TradeExecutedEvent) => html`
+                  <div class="trade-row" @click=${() => setSelectedSymbol(t.symbol)}>
+                    <span class="trade-time">${formatTimestamp(t.timestamp)}</span>
+                    <span class="trade-symbol">${t.symbol}</span>
+                    <span class="trade-side ${t.side}">${t.side}</span>
+                    <span class="trade-qty">${t.quantity.toLocaleString()}</span>
+                    <span class="trade-price">${formatPrice(t.price)}</span>
+                  </div>
+                `
+              )}
         </div>
       </div>
     `;

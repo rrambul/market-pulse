@@ -1,7 +1,17 @@
 import { LitElement, html, css } from 'lit';
 import { SignalWatcher } from '@lit-labs/signals';
 import { customElement, state } from 'lit/decorators.js';
-import { connectionStatus, performanceMetrics, selectedSymbol, unreadAlertCount, stressTestConfig } from '@market-pulse/state';
+import {
+  connectionStatus,
+  performanceMetrics,
+  selectedSymbol,
+  unreadAlertCount,
+  stressTestConfig,
+  setStressTestConfig,
+  getMarketControl,
+} from '@market-pulse/state';
+import type { StressTestConfig } from '@market-pulse/contracts';
+import { NORMAL_PROFILE, STRESS_PROFILE } from '@market-pulse/contracts';
 import { themeStyles } from '@market-pulse/ui';
 
 type ViewTab = 'overview' | 'watchlist' | 'details' | 'stream' | 'alerts';
@@ -223,19 +233,15 @@ export class MpAppShell extends SignalWatcher(LitElement) {
   }
 
   private handleStressToggle(e: Event) {
-    const checked = (e.target as HTMLInputElement).checked;
-    const config = stressTestConfig.get();
-    const newConfig = { ...config, enabled: checked };
+    const enabled = (e.target as HTMLInputElement).checked;
+    // Send the actual stressed cadence (≈10x), not just an `enabled` flag — the
+    // server applies exactly what it receives, so the toggle now has real effect.
+    const newConfig: StressTestConfig = enabled
+      ? { enabled: true, ...STRESS_PROFILE }
+      : { enabled: false, ...NORMAL_PROFILE };
 
-    import('@market-pulse/state').then(({ setStressTestConfig }) => {
-      setStressTestConfig(newConfig);
-    });
-
-    // Notify server
-    const client = (window as any).__marketClient;
-    if (client) {
-      client.restClient.setStressTest(newConfig).catch(console.error);
-    }
+    setStressTestConfig(newConfig);
+    getMarketControl()?.setStressTest(newConfig).catch(console.error);
   }
 
   render() {

@@ -74,4 +74,30 @@ server/         → Backend services
 
 ## Stress Test Mode
 
-Toggle stress test mode from the shell's performance panel to increase update frequency 10x and observe signal-based reactivity under load.
+Toggle stress test mode from the shell's header to drive ~10x the event volume
+(10ms ticks, larger batches) and observe signal-based reactivity under load. The
+toggle sends the shared `STRESS_PROFILE`/`NORMAL_PROFILE` cadence from
+`@market-pulse/contracts`, which the server clamps to safe bounds.
+
+## Development & Quality
+
+```bash
+npm run build:packages   # build shared libs (contracts → utils → state → client → ui)
+npm run typecheck        # type-check all apps + server against the built libs
+npm test                 # run the unit/component test suite (Vitest + happy-dom)
+npm run coverage         # same, with coverage — fails if any file drops below 80%
+npm run build            # full build: packages → apps → server
+```
+
+- **Tests** live in `test/` and run on **Vitest** with a `happy-dom`
+  environment, so Lit components render in-process. Coverage is collected by
+  `@vitest/coverage-v8` and mapped back to source via path aliases. They cover
+  the signal store (including the aggregate-recompute regression), event
+  batching, the WS/REST client (mocked sockets + fetch), the RAF batcher, the
+  simulator engine + REST routes, the chart components, and every microfrontend.
+- A **per-file 80% threshold** (lines/branches/functions/statements) is enforced
+  in `vitest.config.ts`, so coverage can't silently regress.
+- **CI** (`.github/workflows/ci.yml`) runs build → typecheck → coverage →
+  production build on every push and PR.
+- Backend control (scenario injection, stress test) is exposed to microfrontends
+  through `getMarketControl()` in `@market-pulse/state` — no `window` globals.

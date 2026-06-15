@@ -1,24 +1,35 @@
-import type { Asset, MarketEvent, Volatility, AssetType, ScenarioType } from '@market-pulse/contracts';
+import type {
+  Asset,
+  MarketEvent,
+  ScenarioType,
+  ScenarioConfig,
+  WSScenarioMessage,
+  HistoryPoint,
+} from '@market-pulse/contracts';
 import { ASSETS_SEED, SCENARIOS } from '@market-pulse/contracts';
 
 type BatchHandler = (events: MarketEvent[]) => void;
+type ScenarioHandler = (message: WSScenarioMessage) => void;
 
 interface AssetState extends Asset {
   basePrice: number;
-  priceHistory: number[];
+  history: HistoryPoint[];
 }
+
+const MAX_HISTORY = 200;
 
 /**
  * Market simulation engine.
- * 
+ *
  * Uses random walk with volatility profiles, correlated movements,
  * and scenario injection for realistic market behavior.
  */
 export class MarketEngine {
   private assets: Map<string, AssetState> = new Map();
-  private handlers: BatchHandler[] = [];
+  private batchHandlers: BatchHandler[] = [];
+  private scenarioHandlers: ScenarioHandler[] = [];
   private intervalId: ReturnType<typeof setInterval> | null = null;
-  private activeScenario: { type: ScenarioType; endsAt: number; config: typeof SCENARIOS[0] } | null = null;
+  private activeScenario: { type: ScenarioType; endsAt: number; config: ScenarioConfig } | null = null;
 
   // Configurable parameters
   private updateIntervalMs = 100; // 10 updates/sec per batch
@@ -31,12 +42,14 @@ export class MarketEngine {
   }
 
   private initializeAssets(): void {
+    const now = Date.now();
     for (const seed of ASSETS_SEED) {
+      const volume = Math.floor(Math.random() * 10_000_000) + 1_000_000;
       const asset: AssetState = {
         id: seed.symbol.toLowerCase().replace(/[^a-z0-9]/g, '-'),
         symbol: seed.symbol,
         name: seed.name,
-        type: seed.type as AssetType,
+        type: seed.type,
         price: seed.basePrice,
         previousPrice: seed.basePrice,
         open: seed.basePrice,
@@ -44,40 +57,39 @@ export class MarketEngine {
         low: seed.basePrice,
         change: 0,
         changePercent: 0,
-        volume: Math.floor(Math.random() * 10_000_000) + 1_000_000,
-        volatility: seed.baseVolatility as Volatility,
-        lastUpdated: Date.now(),
+        volume,
+        volatility: seed.baseVolatility,
+        lastUpdated: now,
         basePrice: seed.basePrice,
-        priceHistory: [seed.basePrice],
+        history: [{ price: seed.basePrice, volume, timestamp: now }],
       };
       this.assets.set(seed.symbol, asset);
     }
   }
 
   onBatch(handler: BatchHandler): void {
-    this.handlers.push(handler);
+    this.batchHandlers.push(handler);
+  }
+
+  onScenario(handler: ScenarioHandler): void {
+    this.scenarioHandlers.push(handler);
   }
 
   private emit(events: MarketEvent[]): void {
-    for (const handler of this.handlers) {
+    for (const handler of this.batchHandlers) {
       handler(events);
     }
   }
 
   getSnapshot(): Asset[] {
-    return Array.from(this.assets.values()).map(({ basePrice, priceHistory, ...asset }) => asset);
+    return Array.from(this.assets.values()).map(({ basePrice, history, ...asset }) => asset);
   }
 
-  getHistory(symbol: string): { price: number; volume: number; timestamp: number }[] {
+  getHistory(symbol: string): HistoryPoint[] {
     const asset = this.assets.get(symbol);
     if (!asset) return [];
-
-    const now = Date.now();
-    return asset.priceHistory.map((price, i) => ({
-      price,
-      volume: Math.floor(Math.random() * 1_000_000),
-      timestamp: now - (asset.priceHistory.length - i) * 1000,
-    }));
+    // Return a copy of the genuinely recorded history (deterministic per request).
+    return asset.history.map((point) => ({ ...point }));
   }
 
   start(): void {
@@ -102,16 +114,24 @@ export class MarketEngine {
   }
 
   triggerScenario(scenarioType: ScenarioType): void {
-    const config = SCENARIOS.find((s: typeof SCENARIOS[number]) => s.type === scenarioType);
+    const config = SCENARIOS.find((s) => s.type === scenarioType);
     if (!config) return;
 
+    const now = Date.now();
     this.activeScenario = {
       type: scenarioType,
-      endsAt: Date.now() + config.durationMs,
+      endsAt: now + config.durationMs,
       config,
     };
 
     console.log(`[Engine] Scenario started: ${config.label} (${config.durationMs / 1000}s)`);
+
+    const message: WSScenarioMessage = {
+      type: 'SCENARIO_STARTED',
+      scenario: scenarioType,
+      timestamp: now,
+    };
+    for (const handler of this.scenarioHandlers) handler(message);
   }
 
   private tick(): void {
@@ -195,10 +215,10 @@ export class MarketEngine {
     asset.low = Math.min(asset.low, newPrice);
     asset.lastUpdated = timestamp;
 
-    // Keep price history (last 200 points)
-    asset.priceHistory.push(newPrice);
-    if (asset.priceHistory.length > 200) {
-      asset.priceHistory.shift();
+    // Keep price/volume history (last MAX_HISTORY points)
+    asset.history.push({ price: newPrice, volume: asset.volume, timestamp });
+    if (asset.history.length > MAX_HISTORY) {
+      asset.history.shift();
     }
 
     return {
@@ -234,6 +254,7 @@ export class MarketEngine {
 
     return {
       type: 'TRADE_EXECUTED',
+      id: `trade-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
       symbol: asset.symbol,
       side,
       quantity,

@@ -54,20 +54,10 @@ export function setAssets(assets: Asset[]): void {
     }
   }
   if (added) {
-    // Trigger the store signal so consumers of the symbol list re-render
-    assetStore.set(_assetMap);
+    // Publish a NEW map reference so the store signal actually notifies.
+    // signal-polyfill compares with Object.is, so re-setting the same Map
+    // instance is a silent no-op and aggregate consumers (top gainers,
+    // breadth, watchlist, …) would never see newly added symbols.
+    assetStore.set(new Map(_assetMap));
   }
-}
-
-/**
- * Get all current asset values as an array.
- * Reads every per-symbol signal, so the caller subscribes to all of them.
- * Use sparingly — prefer getAssetSignal for single-asset views.
- */
-export function getAllAssets(): Asset[] {
-  const result: Asset[] = [];
-  for (const sig of _assetMap.values()) {
-    result.push(sig.get());
-  }
-  return result;
 }

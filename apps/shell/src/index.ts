@@ -11,11 +11,10 @@ Promise.all([
   import('alerts/AlertsPanel'),
 ]).catch(err => console.warn('[shell] Failed to load some remotes:', err));
 
-// Initialize market client and connect
+// Initialize market client and connect. The client registers its control
+// surface (scenarios, stress test) into the shared state layer during
+// initialize(), so remotes reach it via getMarketControl() — no window global.
 const client = new MarketClientManager();
-
-// Store globally for access by components
-(window as any).__marketClient = client;
 
 // Remove loading screen and mount app shell
 const loading = document.getElementById('loading');

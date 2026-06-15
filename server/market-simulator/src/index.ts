@@ -39,21 +39,24 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Engine broadcasts events to all connected clients
-engine.onBatch((events) => {
+function broadcast(payload: unknown): void {
   if (wss.clients.size === 0) return;
-
-  const message = JSON.stringify({
-    type: 'BATCH',
-    events,
-    timestamp: Date.now(),
-  });
-
+  const message = JSON.stringify(payload);
   for (const client of wss.clients) {
     if (client.readyState === 1) { // WebSocket.OPEN
       client.send(message);
     }
   }
+}
+
+// Engine broadcasts event batches to all connected clients
+engine.onBatch((events) => {
+  broadcast({ type: 'BATCH', events, timestamp: Date.now() });
+});
+
+// Scenario starts are pushed so every client can surface them
+engine.onScenario((message) => {
+  broadcast(message);
 });
 
 engine.start();

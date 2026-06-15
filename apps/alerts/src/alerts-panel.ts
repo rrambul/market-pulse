@@ -1,8 +1,15 @@
 import { LitElement, html, css } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { SignalWatcher } from '@lit-labs/signals';
 import { customElement, state } from 'lit/decorators.js';
-import { alerts, clearAlerts, markAlertsRead, unreadAlertCount } from '@market-pulse/state';
-import { setSelectedSymbol } from '@market-pulse/state';
+import {
+  alerts,
+  clearAlerts,
+  markAlertsRead,
+  unreadAlertCount,
+  setSelectedSymbol,
+  getMarketControl,
+} from '@market-pulse/state';
 import { formatTimestamp } from '@market-pulse/utils';
 import { themeStyles } from '@market-pulse/ui';
 import type { AlertTriggeredEvent } from '@market-pulse/contracts';
@@ -256,10 +263,7 @@ export class MpAlertsPanel extends SignalWatcher(LitElement) {
   ];
 
   private triggerScenario(type: ScenarioType) {
-    const client = (window as any).__marketClient;
-    if (client) {
-      client.restClient.triggerScenario(type).catch(console.error);
-    }
+    getMarketControl()?.triggerScenario(type).catch(console.error);
   }
 
   connectedCallback() {
@@ -332,7 +336,9 @@ export class MpAlertsPanel extends SignalWatcher(LitElement) {
         <div class="alert-list">
           ${filteredAlerts.length === 0
             ? html`<div class="empty">No alerts${this.filterSeverity !== 'all' ? ` with ${this.filterSeverity} severity` : ''}</div>`
-            : filteredAlerts.map(
+            : repeat(
+                filteredAlerts,
+                (alert) => alert.id,
                 (alert: AlertTriggeredEvent) => html`
                   <div
                     class="alert-item"

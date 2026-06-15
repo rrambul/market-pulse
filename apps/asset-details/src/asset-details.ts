@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { SignalWatcher } from '@lit-labs/signals';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 import { getAssetSignal, alerts, isInWatchlist, addToWatchlist, removeFromWatchlist, getPriceHistory } from '@market-pulse/state';
 import { formatPrice, formatChange, formatPercent, formatVolume, formatTimestamp } from '@market-pulse/utils';
 import { themeStyles } from '@market-pulse/ui';
@@ -302,7 +303,9 @@ export class MpAssetDetails extends SignalWatcher(LitElement) {
             ? html`<div class="empty">No alerts for this asset</div>`
             : html`
               <div class="alert-list">
-                ${symbolAlerts.map(
+                ${repeat(
+                  symbolAlerts,
+                  (alert) => alert.id,
                   (alert: AlertTriggeredEvent) => html`
                     <div class="alert-item ${alert.severity}">
                       <div class="alert-time">${formatTimestamp(alert.timestamp)}</div>

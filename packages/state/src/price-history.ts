@@ -32,7 +32,7 @@ export function recordPrice(symbol: string, price: number, timestamp?: number): 
   const point: PricePoint = { price, timestamp: timestamp ?? Date.now() };
 
   if (current.length >= MAX_HISTORY) {
-    // Shift out oldest, push new — reuse array reference pattern for perf
+    // Drop the oldest points and append the new one, keeping length == MAX_HISTORY.
     const next = current.slice(current.length - MAX_HISTORY + 1);
     next.push(point);
     sig.set(next);

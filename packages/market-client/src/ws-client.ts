@@ -1,27 +1,28 @@
-import type { WSMessage, MarketEvent } from '@market-pulse/contracts';
+import type { WSMessage } from '@market-pulse/contracts';
 import { setConnectionStatus } from '@market-pulse/state';
 
-export type WSEventHandler = (events: MarketEvent[]) => void;
+export type WSMessageHandler = (message: WSMessage) => void;
 
 /**
- * WebSocket client with auto-reconnect and exponential backoff.
- * Messages are parsed and forwarded to the handler without buffering here —
- * buffering/batching is handled by the RAF batcher in the ClientManager.
+ * WebSocket client with auto-reconnect and (capped) exponential backoff.
+ * Parsed messages are forwarded as-is to the handler; message-type dispatch and
+ * buffering/batching live in the ClientManager so this stays transport-only.
  */
 export class MarketWebSocketClient {
   private ws: WebSocket | null = null;
   private url: string;
-  private handler: WSEventHandler;
+  private onMessage: WSMessageHandler;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
   private baseDelay = 1000;
+  private maxDelay = 30_000;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private _messageCount = 0;
   private _destroyed = false;
 
-  constructor(url: string, handler: WSEventHandler) {
+  constructor(url: string, onMessage: WSMessageHandler) {
     this.url = url;
-    this.handler = handler;
+    this.onMessage = onMessage;
   }
 
   get messageCount(): number {
@@ -51,17 +52,13 @@ export class MarketWebSocketClient {
 
     this.ws.onmessage = (event: MessageEvent) => {
       this._messageCount++;
+      let msg: WSMessage;
       try {
-        const msg: WSMessage = JSON.parse(event.data as string);
-        if (msg.type === 'BATCH') {
-          this.handler(msg.events);
-        } else if (msg.type === 'SNAPSHOT') {
-          // Snapshot is handled differently — emit as synthetic events
-          this.handler([]);
-        }
+        msg = JSON.parse(event.data as string);
       } catch {
-        // Silently ignore malformed messages
+        return; // Silently ignore malformed messages
       }
+      this.onMessage(msg);
     };
 
     this.ws.onclose = () => {
@@ -83,7 +80,7 @@ export class MarketWebSocketClient {
       return;
     }
 
-    const delay = this.baseDelay * Math.pow(2, this.reconnectAttempts);
+    const delay = Math.min(this.baseDelay * 2 ** this.reconnectAttempts, this.maxDelay);
     this.reconnectAttempts++;
     setConnectionStatus('reconnecting');
 
@@ -102,6 +99,7 @@ export class MarketWebSocketClient {
     this._destroyed = true;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
     }
     if (this.ws) {
       this.ws.onclose = null;

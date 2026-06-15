@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { SignalWatcher } from '@lit-labs/signals';
 import { customElement } from 'lit/decorators.js';
 import {
@@ -306,7 +307,9 @@ export class MpMarketOverview extends SignalWatcher(LitElement) {
           </tr>
         </thead>
         <tbody>
-          ${assets.map(
+          ${repeat(
+            assets,
+            (a) => a.symbol,
             (a) => html`
               <tr @click=${() => this.selectAsset(a.symbol)}>
                 <td>

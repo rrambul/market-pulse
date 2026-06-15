@@ -1,10 +1,14 @@
-export const ASSETS_SEED: Array<{
+import type { AssetType, Volatility, ScenarioConfig } from './index.js';
+
+export interface AssetSeed {
   symbol: string;
   name: string;
-  type: 'stock' | 'crypto' | 'forex' | 'commodity';
+  type: AssetType;
   basePrice: number;
-  baseVolatility: 'low' | 'medium' | 'high';
-}> = [
+  baseVolatility: Volatility;
+}
+
+export const ASSETS_SEED: readonly AssetSeed[] = [
   // Stocks
   { symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', basePrice: 189.50, baseVolatility: 'low' },
   { symbol: 'MSFT', name: 'Microsoft Corp.', type: 'stock', basePrice: 415.20, baseVolatility: 'low' },
@@ -49,14 +53,7 @@ export const ASSETS_SEED: Array<{
   { symbol: 'WHEAT', name: 'Wheat', type: 'commodity', basePrice: 5.68, baseVolatility: 'medium' },
 ];
 
-export const SCENARIOS: Array<{
-  type: string;
-  label: string;
-  description: string;
-  durationMs: number;
-  affectedTypes: string[];
-  priceMultiplier: number;
-}> = [
+export const SCENARIOS: readonly ScenarioConfig[] = [
   {
     type: 'tech-selloff',
     label: 'Tech Selloff',

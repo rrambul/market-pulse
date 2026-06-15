@@ -43,6 +43,7 @@ export interface VolumeUpdatedEvent {
 
 export interface TradeExecutedEvent {
   type: 'TRADE_EXECUTED';
+  id: string;
   symbol: string;
   side: 'buy' | 'sell';
   quantity: number;
@@ -126,6 +127,30 @@ export interface StressTestConfig {
   updateFrequencyMs: number;
   batchSize: number;
 }
+
+/**
+ * Engine cadence profiles. `normal` is the baseline; `stress` drives ~10x the
+ * event volume (10ms ticks, larger batches) so signal reactivity can be
+ * observed under load. Both ends of the wire share these so the toggle and the
+ * server can never silently disagree.
+ */
+export const NORMAL_PROFILE: Readonly<Pick<StressTestConfig, 'updateFrequencyMs' | 'batchSize'>> = {
+  updateFrequencyMs: 100,
+  batchSize: 10,
+};
+
+export const STRESS_PROFILE: Readonly<Pick<StressTestConfig, 'updateFrequencyMs' | 'batchSize'>> = {
+  updateFrequencyMs: 10,
+  batchSize: 36,
+};
+
+/** Safety bounds the server clamps incoming cadence config to. */
+export const ENGINE_LIMITS = {
+  minUpdateFrequencyMs: 10,
+  maxUpdateFrequencyMs: 5000,
+  minBatchSize: 1,
+  maxBatchSize: 200,
+} as const;
 
 // ─── REST API ───
 
